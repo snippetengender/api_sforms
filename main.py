@@ -38,7 +38,6 @@ def create_form(payload: CreateFormRequest):
         "created_at": now,
         "updated_at": now
     })
-
     forms_db.insert_document(forms_data)
 
     edit_path = f"/forms/{payload.form_slug}"

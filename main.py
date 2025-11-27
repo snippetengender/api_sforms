@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from fastapi.middleware.cors import CORSMiddleware
 from os import getenv
 import uuid
 from datetime import datetime
@@ -8,13 +7,6 @@ from dotenv import load_dotenv
 from models.models_for_sforms import CreateFormResponse, CreateFormRequest
 from db_utils.db_handler import DBHandler, init_db, close_db, get_collection
 from sform_utils.slug_creator import slugify
-from models.models_for_auth import GoogleLoginRequest
-import firebase_admin
-from firebase_admin import credentials, auth as firebase_auth
-
-cred = credentials.Certificate("prod_config.json")
-firebase_admin.initialize_app(cred)
-
 
 load_dotenv()
 
@@ -25,14 +17,6 @@ async def lifespan(app: FastAPI):
     close_db()
 
 app = FastAPI(lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  
-    allow_credentials=True,
-    allow_methods=["*"],  
-    allow_headers=["*"],
-)
-
 
 BASE_URL = getenv('BASE_URL')
 
@@ -67,44 +51,6 @@ def create_form(payload: CreateFormRequest):
         message="Form data saved in DB as draft",
         created_at=now
     )
-
-
-@app.post("/forms/auth/login")
-async def user_login(payload: GoogleLoginRequest):
-    try:
-        # Step 1: Verify Firebase token
-        decoded_token = firebase_auth.verify_id_token(payload.id_token)
-        uid = decoded_token["uid"]
-        email = decoded_token.get("email")
-        name = decoded_token.get("name")
-        picture = decoded_token.get("picture")
-
-        user_data = {
-            "uid": uid,
-            "email": email,
-            "name": name,
-            "picture": picture,
-            "last_login": datetime.now()
-        }
-
-        existing_user = users_db.find_document({"uid": uid})
-
-        if existing_user:
-            users_db.update_document({"uid": uid}, user_data)
-        else:
-            user_data["created_at"] = datetime.now()
-            users_db.insert_document(user_data)
-
-        return {
-            "success": True,
-            "message": f"User {name} authenticated",
-            "uid": uid,
-        }
-
-    except Exception as e:
-        print("Login error:", e)
-        return {"success": False, "error": "Invalid ID token"}
-
 
 if __name__ == "__main__":
     import uvicorn

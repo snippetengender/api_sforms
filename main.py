@@ -1,13 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from os import getenv
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
-from models.models_for_sforms import CreateFormResponse, CreateFormRequest
-from db_utils.db_handler import DBHandler, init_db, close_db, get_collection
-from sform_utils.slug_creator import slugify
+from models.models_for_sforms import CreateFormResponse, CreateFormRequest, SubmitResponseRequest
+from db_utils.db_handler import DBHandler, init_db, close_db
+from sform_utils.slug_creator import SlugCreator
 from models.models_for_auth import GoogleLoginRequest
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
@@ -40,13 +40,15 @@ forms_db = DBHandler(getenv('FORMS_COLLECTION'))
 responses_db = DBHandler(getenv('RESPONSES_COLLECTION'))
 users_db = DBHandler(getenv('USERS_COLLECTION'))
 
+slug_creator = SlugCreator(forms_db)
+
 @app.post("/forms", response_model=CreateFormResponse)
 def create_form(payload: CreateFormRequest):
     if not payload.form_id:
         payload.form_id = str(uuid.uuid4())
 
     if not payload.form_slug:
-        payload.form_slug = slugify(payload.form_name)
+        payload.form_slug = slug_creator.generate_unique_slug(payload.form_name)
 
     now = datetime.now()
     forms_data = payload.model_dump()
@@ -105,6 +107,44 @@ async def user_login(payload: GoogleLoginRequest):
         print("Login error:", e)
         return {"success": False, "error": "Invalid ID token"}
 
+@app.get("/forms/{form_slug}")
+def get_form_by_slug(form_slug: str):
+    form = forms_db.find_document({"form_slug": form_slug})
+
+    if "_id" in form:
+        form["_id"] = str(form["_id"])
+
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    form["created_at"] = str(form.get("created_at"))
+    form["updated_at"] = str(form.get("updated_at"))
+
+    return form
+
+
+@app.post("/forms/submit-response")
+def submit_response(payload: SubmitResponseRequest):
+    form = forms_db.find_document({"form_slug": payload.form_slug})
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    now = datetime.now()
+
+    response_data = {
+        "form_slug": payload.form_slug,
+        "form_id": form["form_id"],
+        "response": payload.response,
+        "submitted_at": now
+    }
+
+    responses_db.insert_document(response_data)
+
+    return {
+        "success": True,
+        "message": "Response saved successfully",
+        "submitted_at": now
+    }
 
 if __name__ == "__main__":
     import uvicorn

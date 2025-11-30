@@ -24,3 +24,7 @@ class CreateFormResponse(BaseModel):
     edit_url: str
     message: str
     created_at: datetime
+
+class SubmitResponseRequest(BaseModel):
+    form_slug: str
+    response: str

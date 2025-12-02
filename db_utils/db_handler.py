@@ -39,6 +39,9 @@ class DBHandler:
 
     def find_document(self, query: dict) -> dict:
         return self.collection.find_one(query)
+    
+    def find_documents(self, query: dict) -> list:
+        return list(self.collection.find(query))
 
     def update_document(self, query: dict, update_values: dict) -> int:
         result = self.collection.update_one(query, {'$set': update_values})

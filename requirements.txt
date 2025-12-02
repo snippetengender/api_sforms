@@ -3,3 +3,4 @@ pyjwt
 pymongo
 dotenv
 uvicorn
+firebase-admin

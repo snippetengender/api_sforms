@@ -28,3 +28,6 @@ class CreateFormResponse(BaseModel):
 class SubmitResponseRequest(BaseModel):
     form_slug: str
     response: str
+
+class SlugCreationRequest(BaseModel):
+    form_title: str

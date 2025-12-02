@@ -5,7 +5,7 @@ from os import getenv
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
-from models.models_for_sforms import CreateFormResponse, CreateFormRequest, SubmitResponseRequest
+from models.models_for_sforms import CreateFormResponse, CreateFormRequest, SubmitResponseRequest, SlugCreationRequest
 from db_utils.db_handler import DBHandler, init_db, close_db
 from sform_utils.slug_creator import SlugCreator
 from models.models_for_auth import GoogleLoginRequest
@@ -70,6 +70,13 @@ def create_form(payload: CreateFormRequest):
         created_at=now
     )
 
+@app.post("/forms/create-slug")
+async def create_form_slug(request: SlugCreationRequest):
+    if not request:
+        raise HTTPException(status_code=400, detail="Form name is required")
+
+    slug = slug_creator.generate_unique_slug(request.form_title)
+    return {"form_slug": slug}
 
 @app.post("/forms/auth/login")
 async def user_login(payload: GoogleLoginRequest):
@@ -112,7 +119,7 @@ def get_form_by_slug(form_slug: str):
     form = forms_db.find_document({"form_slug": form_slug})
 
     if "_id" in form:
-        form["_id"] = str(form["_id"])
+        form.pop("_id")
 
     if not form:
         raise HTTPException(status_code=404, detail="Form not found")
@@ -144,6 +151,25 @@ def submit_response(payload: SubmitResponseRequest):
         "success": True,
         "message": "Response saved successfully",
         "submitted_at": now
+    }
+
+@app.get("/forms/{form_slug}/responses")
+def get_form_responses(form_slug: str):
+    form = forms_db.find_document({"form_slug": form_slug})
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    responses = responses_db.find_documents({"form_slug": form_slug})
+
+    for response in responses:
+        if "_id" in response:
+            response.pop("_id")
+        response["submitted_at"] = str(response.get("submitted_at"))
+
+    return {
+        "form_id": form["form_id"],
+        "form_slug": form_slug,
+        "responses": responses
     }
 
 if __name__ == "__main__":

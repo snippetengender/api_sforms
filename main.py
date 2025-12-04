@@ -155,9 +155,6 @@ def submit_response(payload: SubmitResponseRequest):
 
 @app.get("/forms/{form_slug}/responses")
 def get_form_responses(form_slug: str):
-    form = forms_db.find_document({"form_slug": form_slug})
-    if not form:
-        raise HTTPException(status_code=404, detail="Form not found")
 
     responses = responses_db.find_documents({"form_slug": form_slug})
 
@@ -167,7 +164,6 @@ def get_form_responses(form_slug: str):
         response["submitted_at"] = str(response.get("submitted_at"))
 
     return {
-        "form_id": form["form_id"],
         "form_slug": form_slug,
         "responses": responses
     }

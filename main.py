@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from os import getenv
+import os
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv

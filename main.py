@@ -12,10 +12,6 @@ from models.models_for_auth import GoogleLoginRequest
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 
-cred = credentials.Certificate("prod_config.json")
-firebase_admin.initialize_app(cred)
-
-
 load_dotenv()
 
 @asynccontextmanager
@@ -33,6 +29,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+cred = credentials.Certificate("prod_config.json")
+firebase_admin.initialize_app(cred)
 
 BASE_URL = getenv('BASE_URL')
 
@@ -72,7 +70,7 @@ def create_form(payload: CreateFormRequest):
 
 @app.post("/forms/create-slug")
 async def create_form_slug(request: SlugCreationRequest):
-    if not request:
+    if not request.form_title:
         raise HTTPException(status_code=400, detail="Form name is required")
 
     slug = slug_creator.generate_unique_slug(request.form_title)

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from os import getenv
+import os
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
@@ -168,4 +169,5 @@ def get_form_responses(form_slug: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

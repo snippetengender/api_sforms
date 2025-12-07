@@ -9,7 +9,8 @@ class QuestionModel(BaseModel):
     required: bool = False
 
 class CreateFormRequest(BaseModel):
-    created_by: str
+    creator: str
+    creator_email: str
     form_id: Optional[str] = None
     form_name: str
     questions: List[QuestionModel]

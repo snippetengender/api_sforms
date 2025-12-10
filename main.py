@@ -6,12 +6,13 @@ import os
 import uuid
 from datetime import datetime
 from dotenv import load_dotenv
-from models.models_for_sforms import CreateFormResponse, CreateFormRequest, SubmitResponseRequest, SlugCreationRequest
+from models.models_for_sforms import CreateFormResponse, CreateFormRequest, SubmitResponseRequest, SlugCreationRequest, UserEmailRequest
 from db_utils.db_handler import DBHandler, init_db, close_db
 from sform_utils.slug_creator import SlugCreator
 from models.models_for_auth import GoogleLoginRequest
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
+
 
 load_dotenv()
 
@@ -29,9 +30,6 @@ app.add_middleware(
     allow_methods=["*"],  
     allow_headers=["*"],
 )
-
-cred = credentials.Certificate("prod_config.json")
-firebase_admin.initialize_app(cred)
 
 BASE_URL = getenv('BASE_URL')
 
@@ -167,7 +165,29 @@ def get_form_responses(form_slug: str):
         "responses": responses
     }
 
+@app.post("/forms/user-forms")
+def get_forms_by_user(payload: UserEmailRequest):
+    email = payload.email
+    forms = forms_db.find_documents({"creator_email": email})
+
+    filtered_forms = []
+    for form in forms:
+        filtered_form = {
+            "form_slug": form.get("form_slug"),
+            "form_title": form.get("form_name"),
+            "created_at": str(form.get("created_at")),
+            "updated_at": str(form.get("updated_at"))
+        }
+        filtered_forms.append(filtered_form)
+
+    return {
+        "email": email,
+        "forms": filtered_forms
+    }
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
+    cred = credentials.Certificate("prod_config.json")
+    firebase_admin.initialize_app(cred)
     uvicorn.run("main:app", host="0.0.0.0", port=port)

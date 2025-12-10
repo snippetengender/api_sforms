@@ -32,3 +32,6 @@ class SubmitResponseRequest(BaseModel):
 
 class SlugCreationRequest(BaseModel):
     form_title: str
+
+class UserEmailRequest(BaseModel):
+    email: str
